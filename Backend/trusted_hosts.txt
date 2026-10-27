@@ -1,0 +1,8 @@
+# Trusted sites: one hostname or IP address per line.
+# Sites listed here skip the ML model and are shown as LOW RISK.
+# Only add sites you are sure about. Subdomains of a listed domain are trusted too.
+
+110.172.151.102   # college website
+
+# Add your college domain name below, for example:
+# yourcollege.ac.in
