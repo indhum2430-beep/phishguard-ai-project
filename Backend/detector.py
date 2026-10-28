@@ -82,6 +82,10 @@ def _safe_port(parsed):
 
 TRUSTED_PATH = BASE_DIR / "trusted_hosts.txt"
 
+# Punycode (xn--) hosts are very rare in the training data (29 of 20,000 rows),
+# so the model cannot judge them. A rule raises them to at least this probability.
+PUNYCODE_MIN_PROBABILITY = 0.50
+
 
 def is_trusted(host):
     """True if the host (or a subdomain of it) is listed in trusted_hosts.txt."""
@@ -159,10 +163,17 @@ def predict_url(url):
     features = extract_features(host)
     row = pd.DataFrame([features])[feature_names]
 
-    pred = int(model.predict(row)[0])  # 1 = phishing, 0 = legitimate
     probs = model.predict_proba(row)[0]  # classes_ = [0, 1]
-    proba = float(probs[pred])
     phishing_probability = float(probs[1])
+    reasons = explain_features(features)
+
+    # Hybrid rule: the model cannot judge punycode hosts, so raise their score
+    if features["has_punycode"] and phishing_probability < PUNYCODE_MIN_PROBABILITY:
+        phishing_probability = PUNYCODE_MIN_PROBABILITY
+        reasons.append("Punycode domains can imitate real brands, so the risk score was raised.")
+
+    pred = int(phishing_probability >= 0.5)  # 1 = phishing, 0 = legitimate
+    proba = phishing_probability if pred else 1 - phishing_probability
 
     return {
         "url": url,
@@ -170,7 +181,7 @@ def predict_url(url):
         "label": "phishing" if pred else "legitimate",
         "confidence": round(proba, 4),
         "phishing_probability": round(phishing_probability, 4),
-        "reasons": explain_features(features),
+        "reasons": reasons,
     }
 
 
