@@ -189,3 +189,10 @@ def test_trusted_host_skips_the_model(trusted_file):
     assert r["trusted"] is True
     assert r["is_phishing"] is False
     assert r["phishing_probability"] == 0.0
+
+
+@needs_model
+def test_punycode_host_is_raised_to_suspicious():
+    r = predict_url("http://xn--pple-43d.com")
+    assert r["phishing_probability"] >= 0.5
+    assert any("Punycode" in reason for reason in r["reasons"])
