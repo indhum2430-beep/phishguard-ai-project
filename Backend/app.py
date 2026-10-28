@@ -3,10 +3,15 @@ import time
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from detector import predict_url
+from detector import _load, predict_url
 
 app = Flask(__name__)
 CORS(app)  # allow the Vite frontend to call this API
+
+try:
+    _load()  # load the model once at startup so the first scan is fast
+except Exception:
+    pass  # missing model files are reported when a scan is requested
 
 # Status text sent to the React UI. Change these to match what ResultCard.jsx expects.
 STATUS_SAFE = "SAFE"
@@ -78,7 +83,7 @@ def scan():
         "status": status,
         "label": result["label"],
         "is_phishing": result["is_phishing"],
-                "confidence": None if result.get("trusted") else round(result["confidence"] * 100),
+        "confidence": None if result.get("trusted") else round(result["confidence"] * 100),
         "latency": latency_ms,
         "reasons": reasons,
     })
